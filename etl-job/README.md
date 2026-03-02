@@ -11,11 +11,11 @@ A structured ETL pipeline demonstrating data extraction from multiple sources, t
 ## Workflow structure
 
 ```
-runETLPipeline (orchestrator)
-  ├── extractOrders      (extract from source)
-  ├── extractInventory   (extract from source)
-  ├── transformData      (apply business rules)
-  └── loadData           (write to destination)
+runEtlPipeline (orchestrator)
+  ├── extractCsvData     (extract)
+  ├── transformBatch     (transform)
+  │   └── validateRecord   (per-record)
+  └── computeStatistics  (load)
 ```
 
 ## Run locally

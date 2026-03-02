@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import multer from "multer";
-import { Render, ClientError, ServerError } from "@renderinc/sdk";
+import { Render, ClientError, ServerError, AbortError } from "@renderinc/sdk";
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -92,6 +92,9 @@ app.post("/analyze", upload.single("file"), async (req, res) => {
     } else if (error instanceof ServerError) {
       console.error(`Server error: ${error.statusCode}`);
       res.status(500).json({ detail: `Server error: ${error.message}` });
+    } else if (error instanceof AbortError) {
+      console.error("Request aborted");
+      res.status(504).json({ detail: "Workflow task request was aborted" });
     } else {
       console.error(`Unexpected error: ${error}`);
       res.status(500).json({ detail: `Analysis failed: ${String(error)}` });
@@ -137,6 +140,8 @@ app.post("/analyze-task/:taskName", upload.single("file"), async (req, res) => {
       res.status(error.statusCode).json({ detail: `Client error: ${error.message}` });
     } else if (error instanceof ServerError) {
       res.status(500).json({ detail: `Server error: ${error.message}` });
+    } else if (error instanceof AbortError) {
+      res.status(504).json({ detail: "Workflow task request was aborted" });
     } else {
       res.status(500).json({ detail: `Analysis failed: ${String(error)}` });
     }
