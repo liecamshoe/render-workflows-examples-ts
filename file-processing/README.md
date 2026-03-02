@@ -12,10 +12,11 @@ A file processing pipeline that validates, parses, transforms, and summarizes fi
 
 ```
 processFileBatch (orchestrator, parallel)
-  ├── processSingleFile          (per-file)
-  │   ├── readCsvFile / readJsonFile / readTextFile         (read)
-  │   └── analyzeCsvData / analyzeJsonStructure / analyzeTextContent  (analyze)
-  └── generateConsolidatedReport (report)
+  └── processSingleFile          (per-file)
+      ├── readCsvFile / readJsonFile / readTextFile         (read)
+      └── analyzeCsvData / analyzeJsonStructure / analyzeTextContent  (analyze)
+
+generateConsolidatedReport (standalone, takes processFileBatch output)
 ```
 
 ## Run locally

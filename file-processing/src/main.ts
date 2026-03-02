@@ -256,8 +256,46 @@ const processSingleFile = task(
   },
 );
 
-// Subtask: generate a consolidated report from batch results
-const generateConsolidatedReport = task(
+// Root task: processes multiple files in parallel
+task(
+  { name: "processFileBatch", retry, timeoutSeconds: 300 },
+  async function processFileBatch(...filePaths: string[]) {
+    console.log("=".repeat(80));
+    console.log(`[BATCH] Starting batch processing of ${filePaths.length} files`);
+    console.log("=".repeat(80));
+
+    const results = await Promise.all(filePaths.map((fp) => processSingleFile(fp)));
+
+    const successful = results.filter((r) => r.success);
+    const failed = results.filter((r) => !r.success);
+
+    const fileTypes: { [key: string]: number } = {};
+    for (const result of successful) {
+      const ft = (result.file_type as string) ?? "unknown";
+      fileTypes[ft] = (fileTypes[ft] ?? 0) + 1;
+    }
+
+    const batchResult = {
+      total_files: filePaths.length,
+      successful: successful.length,
+      failed: failed.length,
+      success_rate: filePaths.length > 0 ? successful.length / filePaths.length : 0,
+      file_types: fileTypes,
+      results,
+      processed_at: new Date().toISOString(),
+    };
+
+    console.log("=".repeat(80));
+    console.log("[BATCH] Batch processing complete!");
+    console.log(`[BATCH] Successful: ${successful.length}/${filePaths.length}`);
+    console.log("=".repeat(80));
+
+    return batchResult;
+  },
+);
+
+// Root task: generate a consolidated report from batch results
+task(
   { name: "generateConsolidatedReport", retry },
   async function generateConsolidatedReport(batchResult: {
     total_files?: number;
@@ -303,45 +341,5 @@ const generateConsolidatedReport = task(
 
     console.log("[REPORT] Report generated successfully");
     return report;
-  },
-);
-
-// Root task: processes multiple files in parallel
-task(
-  { name: "processFileBatch", retry, timeoutSeconds: 300 },
-  async function processFileBatch(...filePaths: string[]) {
-    console.log("=".repeat(80));
-    console.log(`[BATCH] Starting batch processing of ${filePaths.length} files`);
-    console.log("=".repeat(80));
-
-    const results = await Promise.all(filePaths.map((fp) => processSingleFile(fp)));
-
-    const successful = results.filter((r) => r.success);
-    const failed = results.filter((r) => !r.success);
-
-    const fileTypes: { [key: string]: number } = {};
-    for (const result of successful) {
-      const ft = (result.file_type as string) ?? "unknown";
-      fileTypes[ft] = (fileTypes[ft] ?? 0) + 1;
-    }
-
-    const batchResult = {
-      total_files: filePaths.length,
-      successful: successful.length,
-      failed: failed.length,
-      success_rate: filePaths.length > 0 ? successful.length / filePaths.length : 0,
-      file_types: fileTypes,
-      results,
-      processed_at: new Date().toISOString(),
-    };
-
-    const report = await generateConsolidatedReport(batchResult);
-
-    console.log("=".repeat(80));
-    console.log("[BATCH] Batch processing complete!");
-    console.log(`[BATCH] Successful: ${successful.length}/${filePaths.length}`);
-    console.log("=".repeat(80));
-
-    return { ...batchResult, report };
   },
 );
