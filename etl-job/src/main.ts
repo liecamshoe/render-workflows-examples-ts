@@ -197,52 +197,43 @@ task(
     console.log(`[PIPELINE] Source: ${sourceFile}`);
     console.log("=".repeat(80));
 
-    try {
-      console.log("[PIPELINE] Stage 1/3: EXTRACT");
-      const rawRecords = await extractCsvData(sourceFile);
-      console.log(`[PIPELINE] Extracted ${rawRecords.length} records`);
+    console.log("[PIPELINE] Stage 1/3: EXTRACT");
+    const rawRecords = await extractCsvData(sourceFile);
+    console.log(`[PIPELINE] Extracted ${rawRecords.length} records`);
 
-      console.log("[PIPELINE] Stage 2/3: TRANSFORM");
-      const transformResult = await transformBatch(rawRecords);
-      console.log(
-        `[PIPELINE] Transformation complete: ${(transformResult.success_rate * 100).toFixed(1)}% success rate`,
-      );
+    console.log("[PIPELINE] Stage 2/3: TRANSFORM");
+    const transformResult = await transformBatch(rawRecords);
+    console.log(
+      `[PIPELINE] Transformation complete: ${(transformResult.success_rate * 100).toFixed(1)}% success rate`,
+    );
 
-      console.log("[PIPELINE] Stage 3/3: LOAD");
-      const statistics = await computeStatistics(transformResult.valid_records);
-      console.log("[PIPELINE] Statistics computed");
+    console.log("[PIPELINE] Stage 3/3: LOAD");
+    const statistics = await computeStatistics(transformResult.valid_records);
+    console.log("[PIPELINE] Statistics computed");
 
-      const pipelineResult = {
-        status: "success",
-        extract: {
-          records_extracted: rawRecords.length,
-          source: sourceFile,
-        },
-        transform: {
-          valid_count: transformResult.valid_count,
-          invalid_count: transformResult.invalid_count,
-          success_rate: transformResult.success_rate,
-          invalid_records: transformResult.invalid_records,
-        },
-        load: { statistics },
-        completed_at: new Date().toISOString(),
-      };
+    const pipelineResult = {
+      status: "success",
+      extract: {
+        records_extracted: rawRecords.length,
+        source: sourceFile,
+      },
+      transform: {
+        valid_count: transformResult.valid_count,
+        invalid_count: transformResult.invalid_count,
+        success_rate: transformResult.success_rate,
+        invalid_records: transformResult.invalid_records,
+      },
+      load: { statistics },
+      completed_at: new Date().toISOString(),
+    };
 
-      console.log("=".repeat(80));
-      console.log("[PIPELINE] ETL Pipeline Complete!");
-      console.log(`[PIPELINE] Processed: ${rawRecords.length} records`);
-      console.log(`[PIPELINE] Valid: ${transformResult.valid_count} records`);
-      console.log(`[PIPELINE] Invalid: ${transformResult.invalid_count} records`);
-      console.log("=".repeat(80));
+    console.log("=".repeat(80));
+    console.log("[PIPELINE] ETL Pipeline Complete!");
+    console.log(`[PIPELINE] Processed: ${rawRecords.length} records`);
+    console.log(`[PIPELINE] Valid: ${transformResult.valid_count} records`);
+    console.log(`[PIPELINE] Invalid: ${transformResult.invalid_count} records`);
+    console.log("=".repeat(80));
 
-      return pipelineResult;
-    } catch (error) {
-      console.error(`[PIPELINE] ETL Pipeline failed: ${error}`);
-      return {
-        status: "failed",
-        error: String(error),
-        failed_at: new Date().toISOString(),
-      };
-    }
+    return pipelineResult;
   },
 );

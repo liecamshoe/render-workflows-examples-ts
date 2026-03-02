@@ -12,13 +12,14 @@ A data pipeline that fetches from multiple sources, enriches user profiles with 
 ## Workflow structure
 
 ```
-runPipeline (orchestrator)
-  ├── fetchUserData         (source)
-  ├── fetchTransactions     (source)
-  ├── fetchEngagementData   (source)
-  ├── enrichUserProfiles    (transform)
-  ├── segmentUsers          (transform)
-  └── generateReport        (output)
+runDataPipeline (orchestrator)
+  ├── fetchUserData          (source, parallel)
+  ├── fetchTransactionData   (source, parallel)
+  ├── fetchEngagementData    (source, parallel)
+  ├── transformUserData      (transform)
+  │   ├── calculateUserMetrics (per-user, parallel)
+  │   └── enrichWithGeoData    (per-user, parallel)
+  └── aggregateInsights      (output)
 ```
 
 ## Run locally

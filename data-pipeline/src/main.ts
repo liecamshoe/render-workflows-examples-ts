@@ -211,13 +211,18 @@ const transformUserData = task(
 
     console.log(`[TRANSFORM] Processing ${users.length} users with enrichment`);
 
-    const enrichedUsers = [];
-    for (const user of users) {
-      const userEngagement = engagementMap.get(user.id) ?? ({} as Engagement);
-      const userMetrics = await calculateUserMetrics(user, transactions, userEngagement);
-      const geoData = await enrichWithGeoData(user.email);
-      enrichedUsers.push({ ...userMetrics, geo: geoData });
-    }
+    // Fan out: process all users in parallel, and within each user run
+    // metrics calculation and geo enrichment concurrently.
+    const enrichedUsers = await Promise.all(
+      users.map(async (user) => {
+        const userEngagement = engagementMap.get(user.id) ?? ({} as Engagement);
+        const [userMetrics, geoData] = await Promise.all([
+          calculateUserMetrics(user, transactions, userEngagement),
+          enrichWithGeoData(user.email),
+        ]);
+        return { ...userMetrics, geo: geoData };
+      }),
+    );
 
     console.log(`[TRANSFORM] Enriched ${enrichedUsers.length} user profiles`);
     return { success: true, count: enrichedUsers.length, data: enrichedUsers };
@@ -285,48 +290,43 @@ task(
     console.log(`[PIPELINE] Processing ${userIds.length} users`);
     console.log("=".repeat(80));
 
-    try {
-      // Stage 1: Parallel extraction
-      console.log("[PIPELINE] Stage 1/3: EXTRACT (parallel)");
-      const [userData, transactionData, engagementData] = await Promise.all([
-        fetchUserData(userIds),
-        fetchTransactionData(userIds),
-        fetchEngagementData(userIds),
-      ]);
+    // Stage 1: Parallel extraction
+    console.log("[PIPELINE] Stage 1/3: EXTRACT (parallel)");
+    const [userData, transactionData, engagementData] = await Promise.all([
+      fetchUserData(userIds),
+      fetchTransactionData(userIds),
+      fetchEngagementData(userIds),
+    ]);
 
-      console.log(
-        `[PIPELINE] Extracted: ${userData.count} users, ${transactionData.count} transactions, ${engagementData.count} engagement records`,
-      );
+    console.log(
+      `[PIPELINE] Extracted: ${userData.count} users, ${transactionData.count} transactions, ${engagementData.count} engagement records`,
+    );
 
-      // Stage 2: Transform
-      console.log("[PIPELINE] Stage 2/3: TRANSFORM");
-      const enrichedData = await transformUserData(userData, transactionData, engagementData);
-      console.log(`[PIPELINE] Enriched ${enrichedData.count} user profiles`);
+    // Stage 2: Transform
+    console.log("[PIPELINE] Stage 2/3: TRANSFORM");
+    const enrichedData = await transformUserData(userData, transactionData, engagementData);
+    console.log(`[PIPELINE] Enriched ${enrichedData.count} user profiles`);
 
-      // Stage 3: Aggregate
-      console.log("[PIPELINE] Stage 3/3: AGGREGATE");
-      const insights = await aggregateInsights(enrichedData as { data: EnrichedUser[] });
+    // Stage 3: Aggregate
+    console.log("[PIPELINE] Stage 3/3: AGGREGATE");
+    const insights = await aggregateInsights(enrichedData as { data: EnrichedUser[] });
 
-      const pipelineResult = {
-        status: "success",
-        user_count: userIds.length,
-        stages: {
-          extract: { users: userData.count, transactions: transactionData.count, engagement: engagementData.count },
-          transform: { enriched_users: enrichedData.count },
-          aggregate: { insights },
-        },
-        insights,
-        completed_at: new Date().toISOString(),
-      };
+    const pipelineResult = {
+      status: "success",
+      user_count: userIds.length,
+      stages: {
+        extract: { users: userData.count, transactions: transactionData.count, engagement: engagementData.count },
+        transform: { enriched_users: enrichedData.count },
+        aggregate: { insights },
+      },
+      insights,
+      completed_at: new Date().toISOString(),
+    };
 
-      console.log("=".repeat(80));
-      console.log("[PIPELINE] Data Pipeline Complete!");
-      console.log("=".repeat(80));
+    console.log("=".repeat(80));
+    console.log("[PIPELINE] Data Pipeline Complete!");
+    console.log("=".repeat(80));
 
-      return pipelineResult;
-    } catch (error) {
-      console.error(`[PIPELINE] Pipeline failed: ${error}`);
-      return { status: "failed", error: String(error), failed_at: new Date().toISOString() };
-    }
+    return pipelineResult;
   },
 );

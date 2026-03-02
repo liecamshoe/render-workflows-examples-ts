@@ -44,8 +44,9 @@ const getOrderStatus = task(
   },
 );
 
+// No retry: processing a refund is non-idempotent
 const processRefund = task(
-  { name: "processRefund", retry },
+  { name: "processRefund" },
   function processRefund(orderId: string, reason: string) {
     console.log(`[TOOL] Processing refund for order: ${orderId}`);
     console.log(`[TOOL] Refund reason: ${reason}`);

@@ -11,11 +11,11 @@ A file processing pipeline that validates, parses, transforms, and summarizes fi
 ## Workflow structure
 
 ```
-processFile (orchestrator)
-  ├── validateFile     (check format and size)
-  ├── parseFile        (extract structured data)
-  ├── transformData    (apply business rules)
-  └── generateSummary  (produce final output)
+processFileBatch (orchestrator, parallel)
+  ├── processSingleFile          (per-file)
+  │   ├── readCsvFile / readJsonFile / readTextFile         (read)
+  │   └── analyzeCsvData / analyzeJsonStructure / analyzeTextContent  (analyze)
+  └── generateConsolidatedReport (report)
 ```
 
 ## Run locally
